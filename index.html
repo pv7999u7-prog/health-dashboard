@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="健康">
+<meta name="theme-color" content="#f4f6f9">
+<title>健康總覽</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<header id="top">
+  <h1 id="title">健康總覽</h1>
+  <span id="status"></span>
+  <button id="btnRefresh" class="icon" aria-label="重新整理">⟳</button>
+  <button id="btnSettings" class="icon" aria-label="設定">⚙︎</button>
+</header>
+<main id="main"></main>
+<nav id="tabs">
+  <button data-page="home" class="on"><span>🏠</span>總覽</button>
+  <button data-page="exam"><span>📋</span>健檢</button>
+  <button data-page="daily"><span>⌚</span>日常</button>
+  <button data-page="care"><span>🏥</span>就醫</button>
+  <button data-page="plan"><span>🎯</span>規劃</button>
+</nav>
+<div id="sheet" class="hidden"><div class="sheet-card"><div id="sheetBody"></div></div></div>
+<div id="toast" class="hidden"></div>
+<script src="app.js?v=1"></script>
+</body>
+</html>
