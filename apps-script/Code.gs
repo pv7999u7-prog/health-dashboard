@@ -4,7 +4,7 @@
  *       → 部署 → 新增部署作業 → 網頁應用程式（執行身分：我；存取權：任何人）。
  * 本檔不含任何健康資料，資料全部在試算表裡。
  */
-const VERSION = 1;
+const VERSION = 2;
 
 // 每個分頁的識別方式：id＝第一欄 id；key＝以某欄為唯一鍵；row＝用列號＋原始內容比對
 const TABS = {
@@ -14,12 +14,15 @@ const TABS = {
   '追蹤項目': { mode: 'id', prefix: 'f' },
   '預約': { mode: 'id', prefix: 'a' },
   '建議': { mode: 'id', prefix: 't' },
+  '追蹤紀錄': { mode: 'id', prefix: 'r' },
+  '運動指標': { mode: 'key', key: 'key' },
   '目標': { mode: 'key', key: 'key' },
   '每日數據': { mode: 'key', key: '日期' },
 };
 const DAILY_FIELDS = {
   steps: '步數', restingHR: '靜止心率', avgHR: '平均心率', maxHR: '最高心率', hrv: 'HRV',
   sys: '收縮壓', dia: '舒張壓', bpPulse: '血壓脈搏', weight: '體重', sleep: '睡眠小時', energy: '活動大卡',
+  exMin: '運動分鐘', fat: '體脂率', strength: '肌力', core: '核心',
 };
 
 function doPost(e) {
@@ -55,6 +58,16 @@ function route(b) {
     case 'addMany': return { n: addMany(b.tab, b.rows) };
     case 'update': updateRow(b.tab, b); return {};
     case 'delete': deleteRow(b.tab, b); return {};
+    case 'batch': { // 依序執行多個寫入，回傳每個新增的列
+      const res = [];
+      (b.ops || []).forEach(function (op) {
+        if (op.action === 'add') res.push(addRow(op.tab, op.row));
+        else if (op.action === 'update') { updateRow(op.tab, op); res.push(null); }
+        else if (op.action === 'delete') { deleteRow(op.tab, op); res.push(null); }
+        else throw new Error('批次不支援 ' + op.action);
+      });
+      return { rows: res };
+    }
     case 'sync': {
       const date = syncDaily(b);
       const tabs = readAll();
@@ -229,7 +242,8 @@ function syncDaily(b) {
       if (v > 1440) v = v / 3600; else if (v > 24) v = v / 60;
       v = Math.round(v * 10) / 10;
     }
-    if (k === 'steps' || k === 'energy') v = v === '' ? '' : Math.round(v);
+    if (k === 'steps' || k === 'energy' || k === 'exMin') v = v === '' ? '' : Math.round(v);
+    if (k === 'fat' && v !== '' && v < 1) v = Math.round(v * 1000) / 10; // 0.222 → 22.2
     if (v !== '' && v !== 0) cur[DAILY_FIELDS[k]] = v;
   });
   cur['來源'] = b.source || '捷徑';
@@ -301,6 +315,15 @@ function buildTip() {
     if (y['睡眠小時'] !== '' && +y['睡眠小時'] < 6) lines.push('😴 睡不到 6 小時，今天早點休息');
   } else {
     lines.push('📊 最近兩天沒有同步到健康數據');
+  }
+
+  // 3b. 本週運動分鐘（週一起算）
+  const ex = objs('運動指標').filter(function (x) { return x.key === 'exmin'; })[0];
+  if (ex && +ex['每週目標'] > 0) {
+    const back = (dow + 6) % 7; // 週一＝0
+    let sum = 0, any = false;
+    daily.forEach(function (d) { const dd = dayDiff(d['日期'], today); if (dd >= 0 && dd <= back && d['運動分鐘'] !== '' && d['運動分鐘'] !== undefined) { sum += +d['運動分鐘']; any = true; } });
+    if (any) lines.push('🏃 本週運動 ' + sum + '／' + ex['每週目標'] + ' 分鐘' + (sum >= +ex['每週目標'] ? ' ✓' : '，還差 ' + (ex['每週目標'] - sum)));
   }
 
   // 4. 每日建議（從「建議」分頁輪播）

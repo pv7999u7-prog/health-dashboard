@@ -1,6 +1,6 @@
 /* 健康總覽 App：資料全部來自使用者自己的 Google 試算表（Apps Script＋密碼），本檔不含任何健康資料。 */
 'use strict';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const LS = { cfg: 'hc-cfg-v1', cache: 'hc-cache-v1', page: 'hc-page' };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +19,7 @@ const W = ['日', '一', '二', '三', '四', '五', '六'];
 const fmtD = s => { if (!s) return '日期未填'; const d = parseD(s); return (d.getMonth() + 1) + '/' + d.getDate() + '（' + W[d.getDay()] + '）'; };
 const fmtYMD = s => s ? String(s).slice(0, 10).replace(/-/g, '/') : '日期未填';
 const addMonths = (s, m) => { const d = parseD(s); d.setMonth(d.getMonth() + m); return iso(d); };
-const fmtNum = (v, d) => v === '' || v == null || isNaN(v) ? '–' : (d != null ? Number(v).toFixed(d) : Number(v).toLocaleString());
+const fmtNum = (v, d) => v === '' || v == null || isNaN(v) ? '–' : (d != null ? Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : Number(v).toLocaleString());
 
 // ---------- 資料存取 ----------
 function rowsOf(tab) {
@@ -164,6 +164,23 @@ function lineChart(series, opt = {}) {
   return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" role="img">${g}</svg>${lg}`;
 }
 
+// ---------- 指標說明 ----------
+function openInfo(name) {
+  const x = infoFor(name);
+  const exam = rowsOf('健檢數值').some(r => r['項目'] === name);
+  if (!x) { if (exam) showItem(name); return; }
+  let h = `<h3>${esc(name)}<button class="btn ghost small" data-close>關閉</button></h3>` + infoHtml(x);
+  if (exam) h += `<div class="btns"><button class="btn" id="toTrend">📈 看歷年數值</button></div>`;
+  openSheet(h);
+  const b = $('#toTrend'); if (b) b.onclick = () => showItem(name);
+}
+function infoHtml(x) {
+  const part = (icon, t, v) => v ? `<div class="info"><b>${icon} ${t}</b><div>${esc(v)}</div></div>` : '';
+  return part('📖', '這是什麼', x.d) + part('⚠️', '偏高／偏低的影響', x.e) + part('👀', '要注意', x.w) + part('✅', '怎麼控制', x.c) +
+    '<div class="sub" style="margin:6px 0 10px">一般衛教說明，實際狀況請以醫師判斷為準。</div>';
+}
+const ib = name => infoFor(name) ? `<button class="ib" data-info="${esc(name)}" aria-label="說明">ⓘ</button>` : '';
+
 // ---------- 畫面 ----------
 function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.page === state.page));
@@ -175,6 +192,7 @@ function render() {
     $('#goSet').onclick = openSettings; return;
   }
   ({ home: renderHome, exam: renderExam, daily: renderDaily, care: renderCare, plan: renderPlan })[state.page](m);
+  m.querySelectorAll('[data-info]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); openInfo(el.dataset.info); }));
 }
 
 function renderHome(m) {
@@ -210,7 +228,7 @@ function renderHome(m) {
   keys.forEach(([k, u]) => {
     const x = latestExam(k); if (!x) return;
     const ch = x.prev != null && !isNaN(x.prev) && !isNaN(x.v) ? +x.v - +x.prev : null;
-    h += `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${x.flag ? 'bad' : ''}">${esc(x.v)}<small>${esc(u)}</small></div><div class="d sub">${String(x.date).slice(0, 4)}${ch != null ? '・' + (ch > 0 ? '↑' : ch < 0 ? '↓' : '＝') + Math.abs(+ch.toFixed(2)) : ''}</div></div>`;
+    h += `<div class="tile" data-info="${esc(k)}"><div class="k">${esc(k)} <span class="ibs">ⓘ</span></div><div class="v ${x.flag ? 'bad' : ''}">${esc(x.v)}<small>${esc(u)}</small></div><div class="d sub">${String(x.date).slice(0, 4)}${ch != null ? '・' + (ch > 0 ? '↑' : ch < 0 ? '↓' : '＝') + Math.abs(+ch.toFixed(2)) : ''}</div></div>`;
   });
   h += '</div></div>';
   // 最近一次健檢重點
@@ -226,7 +244,7 @@ function renderHome(m) {
 function tile(k, v, unit, dec, cls, sub) {
   const has = v != null && v !== '';
   const c = has && cls ? cls(v) : '';
-  return `<div class="tile"><div class="k">${esc(k)}</div><div class="v ${c}">${has ? esc(typeof v === 'number' ? fmtNum(v, dec) : v) : '–'}${has && unit ? `<small>${esc(unit)}</small>` : ''}</div>${sub ? `<div class="d sub">${esc(sub)}</div>` : ''}</div>`;
+  return `<div class="tile" ${infoFor(k) ? `data-info="${esc(k)}"` : ''}><div class="k">${esc(k)}${infoFor(k) ? ' <span class="ibs">ⓘ</span>' : ''}</div><div class="v ${c}">${has ? esc(typeof v === 'number' ? fmtNum(v, dec) : v) : '–'}${has && unit ? `<small>${esc(unit)}</small>` : ''}</div>${sub ? `<div class="d sub">${esc(sub)}</div>` : ''}</div>`;
 }
 const lvRank = l => ({ '盡快': 0, '追蹤': 1, '注意': 2, '正常': 3 }[l] ?? 4);
 function findingLi(f) {
@@ -261,7 +279,7 @@ function renderExam(m) {
       h += `<div class="card"><h2>${esc(c)}</h2><div class="tbl-wrap"><table class="tbl"><tr><th>項目</th>${ed.map(e => `<th>${String(e.date).slice(0, 4)}<br>${esc(e.hosp)}</th>`).join('')}</tr>`;
       Object.keys(cats[c]).forEach(name => {
         const it = cats[c][name];
-        h += `<tr class="click" data-item="${esc(name)}"><td>${esc(name)}<div class="ref">${esc([it.unit, it.ref].filter(Boolean).join('・'))}</div></td>` +
+        h += `<tr class="click" data-item="${esc(name)}"><td>${esc(name)}${infoFor(name) ? ' <span class="ibs">ⓘ</span>' : ''}<div class="ref">${esc([it.unit, it.ref].filter(Boolean).join('・'))}</div></td>` +
           ed.map(e => { const x = it.vals[e.date]; return x ? `<td class="${x.flag ? 'flag' : ''}">${esc(x.v)}</td>` : '<td class="muted">–</td>'; }).join('') + '</tr>';
       });
       h += '</table></div></div>';
@@ -295,7 +313,10 @@ function showItem(name) {
   const mm = ref.replace(/[^\d.<>≤≥–\-~ ]/g, ' ').match(/-?\d+(\.\d+)?/g);
   if (mm) mm.slice(0, 2).forEach(v => lines.push({ y: +v, label: lines.length ? '' : '參考值 ' + ref }));
   let h = `<h3>${esc(name)}<button class="btn ghost small" data-close>關閉</button></h3><div class="sub">${esc([it['單位'], '參考值 ' + ref].filter(Boolean).join('・'))}</div>`;
+  const inf = infoFor(name);
+  const infoBlock = inf ? `<details class="infobox" open><summary>這項檢查是什麼？</summary>${infoHtml(inf)}</details>` : '';
   h += pts.some(p => !isNaN(p.y)) ? lineChart([{ name, color: 'var(--accent)', pts }], { lines, labels: true, h: 180 }) : '';
+  h += infoBlock;
   h += '<ul class="list" style="margin-top:8px">' + rs.slice().reverse().map(r => `<li class="row" data-vrow="${r._row}"><div class="grow">${fmtYMD(r['日期'])} ${esc(r['醫院'])}</div><b class="${r['異常'] === '★' ? 'bad' : ''}">${esc(r['數值'])}</b> <span class="sub">${esc(r['單位'])}</span> <button class="btn ghost small">改</button></li>`).join('') + '</ul>';
   openSheet(h);
   $('#sheetBody').querySelectorAll('[data-vrow]').forEach(li => li.onclick = () => editValue(rowsOf('健檢數值').find(r => r._row === +li.dataset.vrow)));
@@ -372,12 +393,14 @@ function renderDaily(m) {
   if (!rs.length) h += '<div class="card empty">這段期間沒有資料。<br>用捷徑從 Apple 健康同步，或按右下角＋手動記錄血壓、體重。</div>';
   else {
     const st = avg(rs, '步數');
-    h += `<div class="card"><h2>👟 步數 <span class="sub">平均 ${fmtNum(st, 0)}</span></h2>${lineChart([{ name: '步數', color: 'var(--accent)', pts: P('步數').map(p => Object.assign(p, { c: p.y >= (goals.steps || 8000) ? 'var(--accent)' : 'var(--warn)' })) }], { bars: true, zero: true, lines: [{ y: goals.steps || 8000, label: '目標 ' + (goals.steps || 8000) }] })}</div>`;
-    h += `<div class="card"><h2>🩸 血壓 <span class="sub">${bpSummary(rs)}</span></h2>${lineChart([{ name: '收縮壓', color: 'var(--bad)', pts: P('收縮壓') }, { name: '舒張壓', color: 'var(--blue)', pts: P('舒張壓') }], { connect: true, lines: [{ y: goals.sbp || 130, label: (goals.sbp || 130) + '/' + (goals.dbp || 80) }, { y: goals.dbp || 80 }] })}</div>`;
-    h += `<div class="card"><h2>❤️ 心率 <span class="sub">靜止平均 ${fmtNum(avg(rs, '靜止心率'), 0)}</span></h2>${lineChart([{ name: '靜止心率', color: 'var(--bad)', pts: P('靜止心率') }, { name: '平均心率', color: 'var(--warn)', pts: P('平均心率') }])}</div>`;
-    if (rs.some(r => r['HRV'] !== '')) h += `<div class="card"><h2>📈 心率變異 HRV</h2>${lineChart([{ name: 'HRV', color: 'var(--blue)', pts: P('HRV') }])}</div>`;
-    h += `<div class="card"><h2>⚖️ 體重 <span class="sub">目標 ${goals.weight || '–'} kg</span></h2>${lineChart([{ name: '體重', color: 'var(--accent)', pts: P('體重') }], { connect: true, lines: goals.weight ? [{ y: goals.weight }] : [] })}</div>`;
-    h += `<div class="card"><h2>😴 睡眠 <span class="sub">平均 ${fmtNum(avg(rs, '睡眠小時'), 1)} 小時</span></h2>${lineChart([{ name: '睡眠', color: 'var(--blue)', pts: P('睡眠小時') }], { bars: true, zero: true, lines: [{ y: goals.sleep || 7 }] })}</div>`;
+    h += `<div class="card"><h2>👟 步數 ${ib('步數')}<span class="sub">平均 ${fmtNum(st, 0)}</span></h2>${lineChart([{ name: '步數', color: 'var(--accent)', pts: P('步數').map(p => Object.assign(p, { c: p.y >= (goals.steps || 8000) ? 'var(--accent)' : 'var(--warn)' })) }], { bars: true, zero: true, lines: [{ y: goals.steps || 8000, label: '目標 ' + (goals.steps || 8000) }] })}</div>`;
+    h += `<div class="card"><h2>🩸 血壓 ${ib('血壓')}<span class="sub">${bpSummary(rs)}</span></h2>${lineChart([{ name: '收縮壓', color: 'var(--bad)', pts: P('收縮壓') }, { name: '舒張壓', color: 'var(--blue)', pts: P('舒張壓') }], { connect: true, lines: [{ y: goals.sbp || 130, label: (goals.sbp || 130) + '/' + (goals.dbp || 80) }, { y: goals.dbp || 80 }] })}</div>`;
+    h += `<div class="card"><h2>❤️ 心率 ${ib('靜止心率')}<span class="sub">靜止平均 ${fmtNum(avg(rs, '靜止心率'), 0)}</span></h2>${lineChart([{ name: '靜止心率', color: 'var(--bad)', pts: P('靜止心率') }, { name: '平均心率', color: 'var(--warn)', pts: P('平均心率') }])}</div>`;
+    if (rs.some(r => r['HRV'] !== '')) h += `<div class="card"><h2>📈 心率變異 HRV ${ib('HRV')}</h2>${lineChart([{ name: 'HRV', color: 'var(--blue)', pts: P('HRV') }])}</div>`;
+    h += `<div class="card"><h2>⚖️ 體重 ${ib('體重')}<span class="sub">目標 ${goals.weight || '–'} kg</span></h2>${lineChart([{ name: '體重', color: 'var(--accent)', pts: P('體重') }], { connect: true, lines: goals.weight ? [{ y: goals.weight }] : [] })}</div>`;
+    if (rs.some(r => r['運動分鐘'] !== '' && r['運動分鐘'] != null)) h += `<div class="card"><h2>🏃 運動分鐘 ${ib('運動分鐘')}<span class="sub">平均每天 ${fmtNum(avg(rs, '運動分鐘'), 0)}</span></h2>${lineChart([{ name: '運動分鐘', color: 'var(--good)', pts: P('運動分鐘') }], { bars: true, zero: true, lines: [{ y: 30, label: '每天 30 分鐘' }] })}</div>`;
+    if (rs.some(r => r['體脂率'] !== '' && r['體脂率'] != null)) h += `<div class="card"><h2>🧈 體脂率 ${ib('體脂率')}</h2>${lineChart([{ name: '體脂率', color: 'var(--warn)', pts: P('體脂率') }], { connect: true, lines: [{ y: 23, label: '男性上限 23%' }] })}</div>`;
+    h += `<div class="card"><h2>😴 睡眠 ${ib('睡眠')}<span class="sub">平均 ${fmtNum(avg(rs, '睡眠小時'), 1)} 小時</span></h2>${lineChart([{ name: '睡眠', color: 'var(--blue)', pts: P('睡眠小時') }], { bars: true, zero: true, lines: [{ y: goals.sleep || 7 }] })}</div>`;
     h += `<div class="card"><h2>📅 每日紀錄</h2><div class="tbl-wrap"><table class="tbl"><tr><th>日期</th><th>步數</th><th>靜止心率</th><th>血壓</th><th>體重</th><th>睡眠</th></tr>` +
       rs.slice().reverse().slice(0, 60).map(r => `<tr class="click" data-day="${esc(r['日期'])}"><td>${fmtD(r['日期'])}</td><td>${fmtNum(r['步數'])}</td><td>${r['靜止心率'] || '–'}</td><td class="${+r['收縮壓'] >= 135 || +r['舒張壓'] >= 85 ? 'flag' : ''}">${r['收縮壓'] ? r['收縮壓'] + '/' + r['舒張壓'] : '–'}</td><td>${r['體重'] || '–'}</td><td>${r['睡眠小時'] || '–'}</td></tr>`).join('') + '</table></div></div>';
   }
@@ -395,8 +418,11 @@ function manualDaily(r) {
   form(r ? '修改 ' + fmtD(r['日期']) : '手動記錄', [
     { k: '日期', type: 'date', def: today() },
     { k: '收縮壓', type: 'number' }, { k: '舒張壓', type: 'number' }, { k: '血壓脈搏', type: 'number', label: '脈搏' },
-    { k: '體重', type: 'number' }, { k: '步數', type: 'number' }, { k: '睡眠小時', type: 'number' },
-  ], r, async o => write({ action: 'sync', source: '手動', date: o['日期'], sys: o['收縮壓'], dia: o['舒張壓'], bpPulse: o['血壓脈搏'], weight: o['體重'], steps: o['步數'], sleep: o['睡眠小時'] }),
+    { k: '體重', type: 'number' }, { k: '體脂率', type: 'number' }, { k: '步數', type: 'number' }, { k: '睡眠小時', type: 'number' },
+    { k: '運動分鐘', type: 'number' },
+    { k: '肌力', type: 'select', options: ['', '有做'], label: '肌力訓練' }, { k: '核心', type: 'select', options: ['', '有做'], label: '核心運動' },
+  ], r ? Object.assign({}, r, { 肌力: r['肌力'] ? '有做' : '', 核心: r['核心'] ? '有做' : '' }) : null,
+  async o => write({ action: 'sync', source: '手動', date: o['日期'], sys: o['收縮壓'], dia: o['舒張壓'], bpPulse: o['血壓脈搏'], weight: o['體重'], fat: o['體脂率'], steps: o['步數'], sleep: o['睡眠小時'], exMin: o['運動分鐘'], strength: o['肌力'] ? 1 : '', core: o['核心'] ? 1 : '' }),
   r ? async () => write({ action: 'delete', tab: '每日數據', id: r['日期'] }, '已刪除') : null);
 }
 
@@ -446,17 +472,24 @@ function showAppt(a) {
   openSheet(h);
   $('#ics').onclick = () => downloadIcs(a);
   $('#edit').onclick = () => editAppt(a);
-  $('#done').onclick = async () => {
-    const note = prompt('看診結果（可留空，會一起記到病史）', '');
-    if (note === null) return;
-    const ok = await write({ action: 'update', tab: '預約', id: a.id, row: { 狀態: '已完成', 備註: [a['備註'], note].filter(Boolean).join('\n') } }, '已標記完成');
-    if (ok && note.trim()) await write({ action: 'add', tab: '病史', row: { 日期: a['日期'], 類型: '看診', 名稱: (a['事由'] || a['科別'] || '看診'), 醫院科別: [a['醫院'], a['科別']].filter(Boolean).join(' '), 說明: note.trim(), 狀態: '已完成' } }, '已記到病史');
-    closeSheet();
+  $('#done').onclick = () => {
+    const f = a['追蹤'] && rowsOf('追蹤項目').find(x => x.id === a['追蹤']);
+    if (f) return recordFu(f, null, a);
+    form('看診完成：' + (a['事由'] || a['科別'] || ''), [
+      { k: '結果', type: 'textarea', ph: '醫師怎麼說、有沒有開藥、下次什麼時候回診' },
+      { k: '記到病史', type: 'select', options: ['是', '否'], def: '是' },
+    ], null, async o => {
+      const ops = [{ action: 'update', tab: '預約', id: a.id, row: { 狀態: '已完成', 備註: [a['備註'], o['結果'] && '結果：' + o['結果']].filter(Boolean).join('\n') } }];
+      if (o['結果'] && o['記到病史'] === '是') ops.push({ action: 'add', tab: '病史', row: { 日期: a['日期'], 類型: '看診', 名稱: (a['事由'] || a['科別'] || '看診'), 醫院科別: [a['醫院'], a['科別']].filter(Boolean).join(' '), 說明: o['結果'], 狀態: '已完成' } });
+      return write({ action: 'batch', ops }, '已記錄');
+    });
   };
 }
 function editAppt(a, preset) {
   form(a ? '修改預約' : '新增預約', APPT_FIELDS, a || preset || null,
-    async o => a ? write({ action: 'update', tab: '預約', id: a.id, row: o }) : write({ action: 'add', tab: '預約', row: o }, '已新增預約'),
+    async o => a ? write({ action: 'update', tab: '預約', id: a.id, row: o })
+      : preset && preset['追蹤'] ? write({ action: 'batch', ops: [{ action: 'add', tab: '預約', row: Object.assign({ 追蹤: preset['追蹤'] }, o) }, { action: 'update', tab: '追蹤項目', id: preset['追蹤'], row: { 狀態: '已預約', 下次日期: o['日期'] } }] }, '已新增預約')
+      : write({ action: 'add', tab: '預約', row: o }, '已新增預約'),
     a ? async () => write({ action: 'delete', tab: '預約', id: a.id }, '已刪除') : null,
     a ? null : '存好後點預約可以加入行事曆，到時間 iPhone 會準時提醒');
 }
@@ -522,14 +555,14 @@ function goalOk(key, cur, target) {
 }
 function renderPlan(m) {
   const sub = state.sub.plan || 'goal';
-  let h = `<div class="seg"><button data-s="goal" class="${sub === 'goal' ? 'on' : ''}">目標</button><button data-s="fu" class="${sub === 'fu' ? 'on' : ''}">追蹤檢查</button><button data-s="tip" class="${sub === 'tip' ? 'on' : ''}">生活建議</button></div>`;
+  let h = `<div class="seg"><button data-s="goal" class="${sub === 'goal' ? 'on' : ''}">目標</button><button data-s="fu" class="${sub === 'fu' ? 'on' : ''}">追蹤</button><button data-s="ex" class="${sub === 'ex' ? 'on' : ''}">運動</button><button data-s="tip" class="${sub === 'tip' ? 'on' : ''}">建議</button></div>`;
   if (sub === 'goal') {
     h += '<div class="card"><h2>健康目標</h2><ul class="list">';
     rowsOf('目標').forEach(g => {
       const target = parseFloat(g['目標']); const c = goalCurrent(g.key); const ok = c ? goalOk(g.key, c.v, target) : null;
       let pct = null;
       if (c && !isNaN(target) && target > 0) pct = ['steps', 'hdl', 'sleep'].includes(g.key) ? c.v / target : target / c.v;
-      h += `<li data-g="${esc(g.key)}"><div class="row"><div class="grow"><div class="t">${esc(g['項目'])}</div><div class="sub">${esc(g['說明'])}</div></div>
+      h += `<li data-g="${esc(g.key)}"><div class="row"><div class="grow"><div class="t">${esc(g['項目'])} ${ib(g['項目'])}</div><div class="sub">${esc(g['說明'])}</div></div>
         <div style="text-align:right"><b class="${ok === true ? 'good' : ok === false ? 'warn' : ''}">${c ? fmtNum(c.v, c.v >= 100 || c.v % 1 === 0 ? 0 : 1) : '–'}</b> <span class="sub">/ ${esc(g['目標'])} ${esc(g['單位'])}</span><div class="sub">${c ? esc(c.src) : g.key === 'smoke' ? '自己記錄' : '還沒有資料'}</div></div></div>
         ${pct != null ? `<div class="prog"><i style="width:${Math.min(100, pct * 100).toFixed(0)}%;${ok ? '' : 'background:var(--warn)'}"></i></div>` : ''}</li>`;
     });
@@ -537,9 +570,11 @@ function renderPlan(m) {
   } else if (sub === 'fu') {
     const fu = followups();
     const done = rowsOf('追蹤項目').filter(f => f['狀態'] === '已完成' || f['狀態'] === '停止');
-    h += `<div class="card"><h2>追蹤檢查時間表</h2><ul class="list">${fu.map(f => `<li data-f="${esc(f.id)}"><div class="row"><div class="grow"><div class="t">${esc(f['項目'])}</div><div class="sub">${esc([f['科別'], f['頻率']].filter(Boolean).join('・'))}</div>${f['依據'] ? `<div class="sub">依據：${esc(f['依據'])}</div>` : ''}<div class="sub">下次：${f['下次日期'] ? fmtYMD(f['下次日期']) : '未排'}${f['上次完成'] ? '・上次 ' + fmtYMD(f['上次完成']) : ''}</div></div>${dueBadge(f._d)}</div></li>`).join('') || '<li class="sub">沒有待追蹤項目</li>'}</ul></div>`;
+    h += `<div class="card"><h2>追蹤檢查時間表</h2><ul class="list">${fu.map(f => `<li data-f="${esc(f.id)}"><div class="row"><div class="grow"><div class="t">${esc(f['項目'])}</div><div class="sub">${esc([f['科別'], f['頻率']].filter(Boolean).join('・'))}</div>${f['依據'] ? `<div class="sub">依據：${esc(f['依據'])}</div>` : ''}<div class="sub">下次：${f['下次日期'] ? fmtYMD(f['下次日期']) : '未排'}${f['上次完成'] ? '・上次 ' + fmtYMD(f['上次完成']) : ''}</div>${lastRec(f.id) ? `<div class="sub">上次結果：${esc(String(lastRec(f.id)['結果']).slice(0, 40))}</div>` : ''}</div>${f['狀態'] === '已預約' ? '<span class="pill good">已預約</span>' : dueBadge(f._d)}</div></li>`).join('') || '<li class="sub">沒有待追蹤項目</li>'}</ul></div>`;
     if (done.length) h += `<div class="card"><h2>已完成／停止</h2><ul class="list">${done.map(f => `<li data-f="${esc(f.id)}" class="row"><div class="grow">${esc(f['項目'])}</div><span class="pill good">${esc(f['狀態'])}</span></li>`).join('')}</ul></div>`;
     h += `<div class="sub" style="text-align:center">追蹤日期是依健檢報告建議推算，實際請依醫師安排修改。</div><button class="add" id="addFu" aria-label="新增追蹤">＋</button>`;
+  } else if (sub === 'ex') {
+    h += renderExercise();
   } else {
     const tips = rowsOf('建議');
     const cats = [...new Set(tips.map(t => t['類別']).filter(Boolean))];
@@ -554,31 +589,103 @@ function renderPlan(m) {
   m.querySelectorAll('[data-g]').forEach(li => li.onclick = () => editGoal(rowsOf('目標').find(g => g.key === li.dataset.g)));
   m.querySelectorAll('[data-f]').forEach(li => li.onclick = () => showFu(rowsOf('追蹤項目').find(f => f.id === li.dataset.f)));
   m.querySelectorAll('[data-t]').forEach(li => li.onclick = () => editTip(rowsOf('建議').find(t => t.id === li.dataset.t)));
+  m.querySelectorAll('[data-ex]').forEach(li => li.onclick = () => editEx(rowsOf('運動指標').find(t => t.key === li.dataset.ex)));
   const af = $('#addFu'); if (af) af.onclick = () => editFu(null);
   const at = $('#addTip'); if (at) at.onclick = () => editTip(null);
+}
+function periodSum(key, from) {
+  const rs = daily().filter(r => r['日期'] >= from && r['日期'] <= today());
+  const col = { exmin: '運動分鐘', steps: '步數', energy: '活動大卡', sleep: '睡眠小時', strength: '肌力', core: '核心' }[key];
+  if (!col) return null;
+  let sum = 0;
+  rs.forEach(r => { const v = parseFloat(r[col]); if (!isNaN(v)) sum += (key === 'strength' || key === 'core') ? (v > 0 ? 1 : 0) : v; });
+  return sum;
+}
+function weekStart() { const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); }
+function renderExercise() {
+  const ex = rowsOf('運動指標');
+  if (!ex.length) return '<div class="card empty">試算表還沒有「運動指標」分頁</div>';
+  const ws = weekStart(), ms = today().slice(0, 8) + '01';
+  const bar = (cur, tgt) => { const p = tgt > 0 ? Math.min(100, cur / tgt * 100) : 0; return `<div class="prog"><i style="width:${p.toFixed(0)}%;${cur >= tgt ? '' : 'background:var(--warn)'}"></i></div>`; };
+  let h = `<div class="card"><h2>🏃 本週與本月進度</h2><div class="sub" style="margin-bottom:6px">本週從 ${fmtD(ws)} 起・本月從 ${fmtD(ms)} 起，數據來自 Apple Watch 與手動記錄</div><ul class="list">`;
+  ex.filter(x => x['每週目標'] !== '' || x['每月目標'] !== '').forEach(x => {
+    const w = periodSum(x.key, ws), mo = periodSum(x.key, ms), u = x['單位'];
+    const f = v => v == null ? '–' : fmtNum(v, v % 1 ? 1 : 0);
+    h += `<li data-ex="${esc(x.key)}"><div class="t">${esc(x['項目'])} ${ib(x['項目'])}</div>
+      <div class="f2" style="margin-top:4px"><div><div class="sub">本週 <b style="color:var(--text)">${f(w)}</b> / ${esc(x['每週目標'])} ${esc(u)}</div>${w != null ? bar(w, +x['每週目標']) : ''}</div>
+      <div><div class="sub">本月 <b style="color:var(--text)">${f(mo)}</b> / ${esc(x['每月目標'])} ${esc(u)}</div>${mo != null ? bar(mo, +x['每月目標']) : ''}</div></div>
+      <div class="sub" style="margin-top:4px">${esc(x['說明'])}</div></li>`;
+  });
+  h += '</ul></div>';
+  // 近 8 週運動分鐘
+  const weeks = [];
+  for (let k = 7; k >= 0; k--) { const d = parseD(ws); d.setDate(d.getDate() - 7 * k); const a = iso(d); const e = new Date(d); e.setDate(e.getDate() + 6); weeks.push({ a, b: iso(e) }); }
+  const pts = weeks.map(w => { let s = 0, any = false; daily().forEach(r => { if (r['日期'] >= w.a && r['日期'] <= w.b && r['運動分鐘'] !== '' && r['運動分鐘'] != null) { s += +r['運動分鐘']; any = true; } }); const d = parseD(w.a); return { x: (d.getMonth() + 1) + '/' + d.getDate(), y: any ? s : null }; });
+  const tgt = +(ex.find(x => x.key === 'exmin') || {})['每週目標'] || 150;
+  h += `<div class="card"><h2>📊 近 8 週運動分鐘</h2>${lineChart([{ name: '每週運動分鐘', color: 'var(--good)', pts: pts.map(p => Object.assign(p, { c: p.y >= tgt ? 'var(--good)' : 'var(--warn)' })) }], { bars: true, zero: true, lines: [{ y: tgt, label: '每週 ' + tgt + ' 分鐘' }] })}</div>`;
+  ex.filter(x => x['每週目標'] === '' && x['每月目標'] === '').forEach(x => { h += `<div class="card" data-ex="${esc(x.key)}"><h2>📌 ${esc(x['項目'])}</h2><div>${esc(x['說明'])}</div></div>`; });
+  h += '<div class="sub" style="text-align:center">肌力、核心運動在「日常」右下角＋手動勾選；點項目可以改目標。</div>';
+  return h;
+}
+function editEx(x) {
+  if (!x) return;
+  form('修改：' + x['項目'], [{ k: '每週目標', type: 'number' }, { k: '每月目標', type: 'number' }, { k: '單位' }, { k: '說明', type: 'textarea' }], x,
+    async o => write({ action: 'update', tab: '運動指標', id: x.key, row: o }));
 }
 function editGoal(g) {
   form('修改目標：' + g['項目'], [{ k: '目標', type: 'number' }, { k: '單位' }, { k: '說明', type: 'textarea' }], g,
     async o => write({ action: 'update', tab: '目標', id: g.key, row: o }));
 }
+function fuRecords(id) { return rowsOf('追蹤紀錄').filter(r => r['追蹤id'] === id).sort((a, b) => String(b['日期']).localeCompare(String(a['日期']))); }
+function lastRec(id) { return fuRecords(id)[0] || null; }
+function fuMonths(f) {
+  const m = String(f['頻率']).match(/(\d+)\s*個月/); const y = String(f['頻率']).match(/每\s*(\d*)\s*年|每年/);
+  return m ? +m[1] : y ? (+(y[1] || 1) * 12) : 6;
+}
 function showFu(f) {
   if (!f) return;
+  const recs = fuRecords(f.id);
+  const appt = rowsOf('預約').filter(a => a['追蹤'] === f.id && a['狀態'] === '待看診' && a['日期'] >= today()).sort((a, b) => String(a['日期']).localeCompare(String(b['日期'])))[0];
   let h = `<h3>${esc(f['項目'])}<button class="btn ghost small" data-close>關閉</button></h3>
     <div class="sub">${esc([f['科別'], f['頻率']].filter(Boolean).join('・'))}</div>${f['依據'] ? `<div>依據：${esc(f['依據'])}</div>` : ''}
-    <div style="margin-top:6px">下次：<b>${f['下次日期'] ? fmtYMD(f['下次日期']) : '未排'}</b>${f['上次完成'] ? `<span class="sub">・上次 ${fmtYMD(f['上次完成'])}</span>` : ''}</div>
-    <div class="btns" style="margin-top:14px"><button class="btn" id="mkAppt">📅 建立預約</button><button class="btn ghost" id="fuDone">✓ 這次做完了</button><button class="btn ghost" id="fuEdit">修改</button></div>`;
+    <div class="kv" style="margin-top:8px">下次追蹤：<b>${f['下次日期'] ? fmtYMD(f['下次日期']) : '未排'}</b> ${f['下次日期'] ? dueBadge(diffDays(today(), f['下次日期'])) : ''}
+      ${appt ? `<br>📅 已預約 ${fmtYMD(appt['日期'])} ${esc(appt['時間'])} ${esc(appt['醫院'])}` : ''}</div>
+    <div class="btns"><button class="btn" id="fuRec">📝 記錄這次追蹤</button>${appt ? '' : '<button class="btn ghost" id="mkAppt">📅 預約下次</button>'}<button class="btn ghost" id="fuEdit">修改項目</button></div>
+    <div class="sec">追蹤紀錄</div>
+    ${recs.length ? '<ul class="list">' + recs.map(r => `<li data-rec="${esc(r.id)}"><div class="row"><b class="grow">${fmtYMD(r['日期'])}</b><span class="sub">${esc(r['醫院科別'])}</span></div><div style="white-space:pre-line">${esc(r['結果'] || '（沒寫結果）')}</div>${r['下次日期'] ? `<div class="sub">→ 下次 ${fmtYMD(r['下次日期'])}</div>` : ''}</li>`).join('') + '</ul>'
+      : `<div class="sub">還沒有紀錄。${f['上次完成'] ? '上次完成 ' + fmtYMD(f['上次完成']) + '（來自健檢）' : ''}</div>`}`;
   openSheet(h);
-  $('#mkAppt').onclick = () => editAppt(null, { 日期: f['下次日期'] && f['下次日期'] >= today() ? f['下次日期'] : '', 科別: f['科別'], 事由: f['項目'] });
+  const ma = $('#mkAppt'); if (ma) ma.onclick = () => editAppt(null, { 日期: f['下次日期'] && f['下次日期'] >= today() ? f['下次日期'] : '', 科別: f['科別'], 事由: f['項目'], 追蹤: f.id });
   $('#fuEdit').onclick = () => editFu(f);
-  $('#fuDone').onclick = () => {
-    const m = String(f['頻率']).match(/(\d+)\s*個月/); const y = String(f['頻率']).match(/每\s*(\d*)\s*年|每年/);
-    const months = m ? +m[1] : y ? (+(y[1] || 1) * 12) : 6;
-    form('記錄完成：' + f['項目'], [
-      { k: '上次完成', type: 'date', def: today(), label: '這次做的日期' },
-      { k: '下次日期', type: 'date', def: addMonths(today(), months), label: '下次（預設 ' + months + ' 個月後）' },
-      { k: '狀態', type: 'select', options: ['待安排', '已預約', '已完成', '停止'], def: '待安排' },
-    ], null, async o => write({ action: 'update', tab: '追蹤項目', id: f.id, row: o }, '已更新'));
-  };
+  $('#fuRec').onclick = () => recordFu(f, null, appt && appt['日期'] <= today() ? appt : null);
+  $('#sheetBody').querySelectorAll('[data-rec]').forEach(li => li.onclick = () => recordFu(f, recs.find(r => r.id === li.dataset.rec)));
+}
+// 記錄一次追蹤：寫追蹤紀錄、更新追蹤項目，可順便建立下次預約；從預約進來會把預約標成完成
+function recordFu(f, rec, appt) {
+  const months = fuMonths(f);
+  const base = rec ? rec['日期'] : appt ? appt['日期'] : today();
+  form(rec ? '修改追蹤紀錄' : '記錄追蹤：' + f['項目'], [
+    { k: '日期', type: 'date', def: base, label: '這次追蹤的日期' },
+    { k: '醫院科別', def: appt ? [appt['醫院'], appt['科別']].filter(Boolean).join(' ') : f['科別'] },
+    { k: '結果', type: 'textarea', ph: '例如：大小沒變、維持 0.2 cm；醫師說一年後再追' },
+    { k: '下次日期', type: 'date', def: rec ? rec['下次日期'] : addMonths(base, months), label: '下次追蹤日期（預設 ' + months + ' 個月後，依醫師說的改）' },
+    ...(rec ? [] : [
+      { k: '下次預約', type: 'select', options: ['先不用', '建立預約'], def: '先不用', label: '同時建立下次預約' },
+      { k: '時間', type: 'time', def: '09:00', label: '預約時間（建立預約才用到）' },
+      { k: '醫院', def: appt ? appt['醫院'] : '', label: '預約醫院（建立預約才用到）' },
+      { k: '後續', type: 'select', options: ['繼續追蹤', '不用再追蹤'], def: '繼續追蹤' },
+    ]),
+    { k: '備註', type: 'textarea' },
+  ], rec, async o => {
+    const row = { 追蹤id: f.id, 日期: o['日期'], 醫院科別: o['醫院科別'], 結果: o['結果'], 下次日期: o['下次日期'], 備註: o['備註'] };
+    if (rec) return write({ action: 'update', tab: '追蹤紀錄', id: rec.id, row }, '已修改');
+    const stop = o['後續'] === '不用再追蹤', mk = !stop && o['下次預約'] === '建立預約' && o['下次日期'];
+    const ops = [{ action: 'add', tab: '追蹤紀錄', row },
+      { action: 'update', tab: '追蹤項目', id: f.id, row: { 上次完成: o['日期'], 下次日期: stop ? '' : o['下次日期'], 狀態: stop ? '已完成' : mk ? '已預約' : '待安排' } }];
+    if (appt) ops.push({ action: 'update', tab: '預約', id: appt.id, row: { 狀態: '已完成' } });
+    if (mk) ops.push({ action: 'add', tab: '預約', row: { 日期: o['下次日期'], 時間: o['時間'], 醫院: o['醫院'], 科別: f['科別'], 事由: f['項目'], 狀態: '待看診', 追蹤: f.id } });
+    return write({ action: 'batch', ops }, mk ? '已記錄，也建立了下次預約' : '已記錄');
+  }, rec ? async () => write({ action: 'delete', tab: '追蹤紀錄', id: rec.id }, '已刪除') : null);
 }
 function editFu(f) {
   form(f ? '修改追蹤項目' : '新增追蹤項目', [
@@ -649,17 +756,17 @@ function openSettings() {
 function openGuide() {
   const url = state.cfg.url || '（先在設定填 Apps Script 網址）';
   const h = `<h3>捷徑設定教學<button class="btn ghost small" data-close>關閉</button></h3><div class="guide">
-  <p class="sub">iPhone 的網頁 App 不能直接讀 Apple 健康，所以用「捷徑」每天讀一次再送到試算表。歐姆龍 OMRON connect 先在它的設定裡開啟「Apple 健康」同步，血壓就會進到 Apple 健康，捷徑一起讀。</p>
+  <p class="sub">iPhone 的網頁 App 不能直接讀 Apple 健康，所以用「捷徑」每天讀一次再送到試算表。歐姆龍 OMRON connect 先在它的設定裡開啟「Apple 健康」同步，血壓就會進到 Apple 健康；米家體脂秤 S400 要用「小米運動健康」App 綁定並開啟 Apple 健康同步，體重、體脂才會進去。捷徑再一起讀。</p>
   <div class="sec">一、建立捷徑「健康同步」</div>
   <ol>
     <li>打開「捷徑」App → 右上角＋ → 名稱改成 <b>健康同步</b>。</li>
     <li>加入動作「<b>尋找健康樣本</b>」：類型選 <b>步數</b>，條件「開始日期」<b>是今天</b>。接著加「<b>計算統計資料</b>」選 <b>總和</b>，再加「<b>設定變數</b>」命名 <code>steps</code>。</li>
     <li>同樣做法（尋找 → 計算統計資料 → 設定變數），每一項做一組：
-      <div class="kv">靜止心率：今天、<b>平均</b> → <code>restingHR</code><br>心率：今天、<b>平均</b> → <code>avgHR</code>；再一組 <b>最大值</b> → <code>maxHR</code><br>心率變異性：今天、<b>平均</b> → <code>hrv</code><br>動態能量（活動能量）：今天、<b>總和</b> → <code>energy</code><br>收縮壓：今天、<b>平均</b> → <code>sys</code><br>舒張壓：今天、<b>平均</b> → <code>dia</code><br>體重：開始日期<b>在過去 7 天</b>、排序最新、限制 1 個 → <code>weight</code>（不用計算統計）<br>睡眠分析（可選）：開始日期在<b>過去 1 天</b>、值<b>不是「在床上」</b> → 加「取得健康樣本的詳細資訊」選<b>持續時間</b> → 計算統計資料<b>總和</b> → <code>sleep</code></div>
+      <div class="kv">靜止心率：今天、<b>平均</b> → <code>restingHR</code><br>心率：今天、<b>平均</b> → <code>avgHR</code>；再一組 <b>最大值</b> → <code>maxHR</code><br>心率變異性：今天、<b>平均</b> → <code>hrv</code><br>動態能量（活動能量）：今天、<b>總和</b> → <code>energy</code><br>運動分鐘（Apple Watch 綠圈）：今天、<b>總和</b> → <code>exMin</code><br>收縮壓：今天、<b>平均</b> → <code>sys</code><br>舒張壓：今天、<b>平均</b> → <code>dia</code><br>體重：開始日期<b>在過去 7 天</b>、排序最新、限制 1 個 → <code>weight</code>（不用計算統計）<br>身體脂肪百分比：同體重的設定 → <code>fat</code><br>睡眠分析（可選）：開始日期在<b>過去 1 天</b>、值<b>不是「在床上」</b> → 加「取得健康樣本的詳細資訊」選<b>持續時間</b> → 計算統計資料<b>總和</b> → <code>sleep</code></div>
       不需要的項目可以跳過，沒有的資料會自動略過。</li>
     <li>加入動作「<b>取得 URL 內容</b>」：網址填下面這個；展開後方法選 <b>POST</b>，要求本文選 <b>JSON</b>，新增欄位（類型都選「文字」，值點變數）：
       <div class="kv"><code>${esc(url)}</code><br><button class="btn ghost small" id="cpUrl" style="margin-top:6px">複製網址</button></div>
-      <div class="kv"><code>key</code>＝你的密碼<br><code>action</code>＝<code>sync</code><br><code>date</code>＝「目前日期」（點變數後格式選「自訂」<code>yyyy-MM-dd</code>）<br><code>steps</code>、<code>restingHR</code>、<code>avgHR</code>、<code>maxHR</code>、<code>hrv</code>、<code>energy</code>、<code>sys</code>、<code>dia</code>、<code>weight</code>、<code>sleep</code>＝對應的變數</div></li>
+      <div class="kv"><code>key</code>＝你的密碼<br><code>action</code>＝<code>sync</code><br><code>date</code>＝「目前日期」（點變數後格式選「自訂」<code>yyyy-MM-dd</code>）<br><code>steps</code>、<code>restingHR</code>、<code>avgHR</code>、<code>maxHR</code>、<code>hrv</code>、<code>energy</code>、<code>exMin</code>、<code>sys</code>、<code>dia</code>、<code>weight</code>、<code>fat</code>、<code>sleep</code>＝對應的變數</div></li>
     <li>加入「<b>取得字典值</b>」：鍵 <code>text</code>，字典選上一步的「URL 內容」。</li>
     <li>加入「<b>顯示通知</b>」，內容選上一步的「字典值」。</li>
     <li>按▶︎ 試跑一次，第一次會問健康資料權限，全部允許。跑完回 App 重新整理，「日常」就會有今天的資料。</li>
