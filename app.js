@@ -1,6 +1,6 @@
 /* 健康總覽 App：資料全部來自使用者自己的 Google 試算表（Apps Script＋密碼），本檔不含任何健康資料。 */
 'use strict';
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.0';
 const LS = { cfg: 'hc-cfg-v1', cache: 'hc-cache-v1', page: 'hc-page' };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -184,7 +184,7 @@ const ib = name => infoFor(name) ? `<button class="ib" data-info="${esc(name)}" 
 // ---------- 畫面 ----------
 function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.page === state.page));
-  const titles = { home: '健康總覽', exam: '歷年健檢', daily: '日常數據', care: '就醫紀錄', plan: '健康規劃' };
+  const titles = { home: 'HealtHK', exam: '歷年健檢', daily: '日常數據', care: '就醫紀錄', plan: '健康規劃' };
   $('#title').textContent = titles[state.page];
   const m = $('#main');
   if (!state.data) {

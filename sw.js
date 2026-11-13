@@ -1,6 +1,6 @@
 // 只快取 App 外殼；健康資料不經過 service worker 快取
-const VERSION = 'hc-v5';
-const SHELL = ['./', 'index.html', 'style.css?v=4', 'info.js?v=3', 'app.js?v=5', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png'];
+const VERSION = 'hc-v6';
+const SHELL = ['./', 'index.html', 'style.css?v=5', 'info.js?v=3', 'app.js?v=6', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hc-') && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
