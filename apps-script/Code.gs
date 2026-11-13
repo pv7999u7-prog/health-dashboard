@@ -4,7 +4,7 @@
  *       → 部署 → 新增部署作業 → 網頁應用程式（執行身分：我；存取權：任何人）。
  * 本檔不含任何健康資料，資料全部在試算表裡。
  */
-const VERSION = 2;
+const VERSION = 3;
 
 // 每個分頁的識別方式：id＝第一欄 id；key＝以某欄為唯一鍵；row＝用列號＋原始內容比對
 const TABS = {
@@ -242,8 +242,18 @@ function syncDaily(b) {
       if (v > 1440) v = v / 3600; else if (v > 24) v = v / 60;
       v = Math.round(v * 10) / 10;
     }
-    if (k === 'steps' || k === 'energy' || k === 'exMin') v = v === '' ? '' : Math.round(v);
-    if (k === 'fat' && v !== '' && v < 1) v = Math.round(v * 1000) / 10; // 0.222 → 22.2
+    if (v !== '') {
+      // 捷徑單位設錯時自動換算
+      if (k === 'hrv' && v < 1) v = v * 1000;          // 秒 → 毫秒
+      if (k === 'energy' && v > 5000) v = v / 1000;    // 卡 → 大卡
+      if (k === 'exMin' && v > 1440) v = v / 60;       // 秒 → 分鐘
+      if (k === 'weight' && v > 300) v = v / 1000;     // 公克 → 公斤
+      if (k === 'fat' && v < 1) v = v * 100;           // 0.222 → 22.2
+      // 四捨五入
+      if (k === 'steps' || k === 'energy' || k === 'exMin' || k === 'restingHR' || k === 'avgHR' || k === 'maxHR' ||
+          k === 'sys' || k === 'dia' || k === 'bpPulse') v = Math.round(v);
+      else if (k === 'hrv' || k === 'weight' || k === 'fat') v = Math.round(v * 10) / 10;
+    }
     if (v !== '' && v !== 0) cur[DAILY_FIELDS[k]] = v;
   });
   cur['來源'] = b.source || '捷徑';
