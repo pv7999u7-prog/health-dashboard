@@ -1,15 +1,15 @@
 :root {
   --bg: #f2f2f7; --card: #ffffff; --text: #1c1c1e; --sub: #6e6e73; --line: #e5e5ea;
-  --accent: #ff2d55; --accent-soft: #ffe5ea; --warn: #ff9500; --warn-soft: #fff1dc;
+  --accent: #0a7cff; --accent-soft: #e3f0ff; --warn: #ff9500; --warn-soft: #fff1dc;
   --bad: #ff3b30; --bad-soft: #ffe7e5; --good: #30b350; --good-soft: #e2f7e6; --blue: #007aff;
-  --teal: #20b2c4; --purple: #af52de; --chart-grid: #ececf1;
+  --teal: #20b2c4; --purple: #5856d6; --chart-grid: #ececf1;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #000000; --card: #1c1c1e; --text: #f2f2f7; --sub: #98989f; --line: #2c2c2e;
-    --accent: #ff375f; --accent-soft: #3d1520; --warn: #ff9f0a; --warn-soft: #3a2a10;
+    --accent: #3d9bff; --accent-soft: #10284a; --warn: #ff9f0a; --warn-soft: #3a2a10;
     --bad: #ff453a; --bad-soft: #3d1a17; --good: #32d74b; --good-soft: #143a1c; --blue: #0a84ff;
-    --teal: #40c8e0; --purple: #bf5af2; --chart-grid: #2c2c2e;
+    --teal: #40c8e0; --purple: #5e5ce6; --chart-grid: #2c2c2e;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -124,8 +124,8 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 15.5px; }
 .infobox summary { color: var(--accent); font-weight: 600; margin-bottom: 8px; cursor: pointer; }
 
 /* ===== 1.2 視覺 ===== */
-:root { --shadow: 0 1px 2px rgba(20,30,50,.05), 0 6px 18px rgba(20,30,50,.06); --hero1: #ff5f6d; --hero2: #ff2d78; --hero3: #c644fc; }
-@media (prefers-color-scheme: dark) { :root { --shadow: none; --hero1: #d9344a; --hero2: #c21f60; --hero3: #8e2fc0; } }
+:root { --shadow: 0 1px 2px rgba(20,30,50,.05), 0 6px 18px rgba(20,30,50,.06); --hero1: #0a5cd6; --hero2: #0a8fdc; --hero3: #14b89a; }
+@media (prefers-color-scheme: dark) { :root { --shadow: none; --hero1: #0b3f8f; --hero2: #0b6390; --hero3: #0e7d6a; } }
 .card { border-radius: 18px; box-shadow: var(--shadow); padding: 16px; }
 .ch { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .ch h2 { margin: 0; font-size: 19px; }
@@ -139,7 +139,7 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 15.5px; }
 
 /* 今日卡 */
 .hero { border-radius: 22px; padding: 18px; margin-bottom: 14px; color: #fff;
-  background: linear-gradient(135deg, var(--hero1) 0%, var(--hero2) 55%, var(--hero3) 100%); box-shadow: 0 12px 28px rgba(255,45,85,.28); }
+  background: linear-gradient(135deg, var(--hero1) 0%, var(--hero2) 55%, var(--hero3) 100%); box-shadow: 0 12px 28px rgba(10,100,220,.28); }
 .hero-top { display: flex; align-items: center; gap: 12px; }
 .hero-top > div:first-child { flex: 1; }
 .hero-date { font-size: 14px; opacity: .85; }
@@ -235,18 +235,18 @@ a.btn { text-decoration: none; display: inline-block; }
 .ml8 { margin-left: 8px; }
 
 /* ===== 1.3 有朝氣配色（參考 Apple 健康） ===== */
-header h1 { font-weight: 800; letter-spacing: .3px; background: linear-gradient(90deg, #34c759, #20b2c4 45%, #ff2d55); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header h1 { font-weight: 800; letter-spacing: .3px; background: linear-gradient(90deg, #0a7cff, #14b8c4 55%, #30b350); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .ci { background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
 .dcard { border-top: 4px solid var(--dc, var(--accent)); }
-.dsum .dcard:nth-child(6n+1) { --dc: #ff2d55; } .dsum .dcard:nth-child(6n+2) { --dc: #ff9500; }
-.dsum .dcard:nth-child(6n+3) { --dc: #30b350; } .dsum .dcard:nth-child(6n+4) { --dc: #007aff; }
-.dsum .dcard:nth-child(6n+5) { --dc: #af52de; } .dsum .dcard:nth-child(6n+6) { --dc: #20b2c4; }
+.dsum .dcard:nth-child(6n+1) { --dc: #0a7cff; } .dsum .dcard:nth-child(6n+2) { --dc: #ff9500; }
+.dsum .dcard:nth-child(6n+3) { --dc: #30b350; } .dsum .dcard:nth-child(6n+4) { --dc: #5856d6; }
+.dsum .dcard:nth-child(6n+5) { --dc: #20b2c4; } .dsum .dcard:nth-child(6n+6) { --dc: #8e8e93; }
 .kcard { background: var(--card); box-shadow: var(--shadow); }
-.kgrid .kcard:nth-child(5n+1) { border-top: 3px solid #ff2d55; } .kgrid .kcard:nth-child(5n+2) { border-top: 3px solid #ff9500; }
-.kgrid .kcard:nth-child(5n+3) { border-top: 3px solid #30b350; } .kgrid .kcard:nth-child(5n+4) { border-top: 3px solid #007aff; }
-.kgrid .kcard:nth-child(5n+5) { border-top: 3px solid #af52de; }
+.kgrid .kcard:nth-child(5n+1) { border-top: 3px solid #0a7cff; } .kgrid .kcard:nth-child(5n+2) { border-top: 3px solid #ff9500; }
+.kgrid .kcard:nth-child(5n+3) { border-top: 3px solid #30b350; } .kgrid .kcard:nth-child(5n+4) { border-top: 3px solid #5856d6; }
+.kgrid .kcard:nth-child(5n+5) { border-top: 3px solid #20b2c4; }
 .kgrid .kcard.is-bad { border-top-color: var(--bad); }
-.btn { background: linear-gradient(135deg, #ff5f6d, #ff2d55); box-shadow: 0 4px 12px rgba(255,45,85,.25); }
+.btn { background: linear-gradient(135deg, #0a7cff, #0a9bd6); box-shadow: 0 4px 12px rgba(10,124,255,.25); }
 .btn.ghost { background: var(--bg); box-shadow: none; }
 .tl-date { background: linear-gradient(160deg, #e9f3ff, #fff); }
 @media (prefers-color-scheme: dark) { .tl-date { background: #2c2c2e; } }
