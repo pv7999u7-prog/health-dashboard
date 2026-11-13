@@ -4,7 +4,7 @@
  *       → 部署 → 新增部署作業 → 網頁應用程式（執行身分：我；存取權：任何人）。
  * 本檔不含任何健康資料，資料全部在試算表裡。
  */
-const VERSION = 3;
+const VERSION = 4;
 
 // 每個分頁的識別方式：id＝第一欄 id；key＝以某欄為唯一鍵；row＝用列號＋原始內容比對
 const TABS = {
@@ -296,7 +296,7 @@ function buildTip() {
     });
 
   // 2. 追蹤項目：14 天內到期每天提醒；過期的週一提醒
-  const fu = objs('追蹤項目').filter(function (f) { return f['狀態'] !== '已完成' && f['狀態'] !== '停止' && f['下次日期']; })
+  const fu = objs('追蹤項目').filter(function (f) { return f['狀態'] !== '已完成' && f['狀態'] !== '停止' && f['狀態'] !== '已預約' && f['下次日期']; })
     .map(function (f) { f._d = dayDiff(today, f['下次日期']); return f; });
   fu.filter(function (f) { return f._d >= 0 && f._d <= 14; }).forEach(function (f) {
     lines.push('🩺 ' + f['項目'] + '：' + (f._d === 0 ? '今天' : f._d + ' 天後') + '到期，記得預約' + (f['科別'] ? f['科別'] : ''));
