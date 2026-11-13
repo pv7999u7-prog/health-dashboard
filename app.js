@@ -1,6 +1,6 @@
 /* 健康總覽 App：資料全部來自使用者自己的 Google 試算表（Apps Script＋密碼），本檔不含任何健康資料。 */
 'use strict';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const LS = { cfg: 'hc-cfg-v1', cache: 'hc-cache-v1', page: 'hc-page' };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,7 +47,7 @@ async function refresh(quiet) {
   setStatus('更新中…');
   try {
     const j = await api({ action: 'read' });
-    state.data = { tabs: j.tabs, tip: j.tip, sheetUrl: j.sheetUrl, at: Date.now() };
+    state.data = { tabs: j.tabs, tip: j.tip, sheetUrl: j.sheetUrl, at: Date.now() }; state.fresh = true;
     lsSet(LS.cache, state.data);
     setStatus('');
     render();
@@ -537,7 +537,7 @@ function mhbDue() {
   return cands[cands.length - 1];
 }
 function checkMhb() {
-  if (state.mhbShown || !state.data || !state.data.tabs || !state.data.tabs['目標']) return;
+  if (state.mhbShown || !state.fresh || !state.data || !state.data.tabs || !state.data.tabs['目標']) return;
   const row = rowsOf('目標').find(r => r.key === '_mhb');
   const last = row ? String(row['目標']).slice(0, 10) : '';
   const due = mhbDue();
