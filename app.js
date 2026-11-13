@@ -1,6 +1,6 @@
 /* 健康總覽 App：資料全部來自使用者自己的 Google 試算表（Apps Script＋密碼），本檔不含任何健康資料。 */
 'use strict';
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const LS = { cfg: 'hc-cfg-v1', cache: 'hc-cache-v1', page: 'hc-page' };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -209,10 +209,10 @@ function renderHome(m) {
   let h = '';
 
   // ── 今日卡：問候＋今日步數環＋7 天數據＋提醒 ──
-  const ringV = stepsToday != null ? stepsToday : st;
+  const ringV = stepsToday;
   h += `<div class="hero">
     <div class="hero-top"><div><div class="hero-date">${now.getMonth() + 1} 月 ${now.getDate()} 日 星期${W[now.getDay()]}</div><div class="hero-hi">${hello}，今天也要照顧好自己</div></div>
-    ${ring(ringV, stGoal, stepsToday != null ? '今日步數' : '7 天平均')}</div>
+    ${ring(ringV, stGoal, stepsToday != null ? '今日・' + String(todayRow['更新時間'] || '').slice(11, 16) + ' 同步' : '今天還沒同步')}</div>
     <div class="stats">
       ${stat('❤️', '靜止心率', hr != null ? Math.round(hr) : '–', '下/分', '近 7 天', '靜止心率')}
       ${stat('🩸', '血壓', bp && bpd ? bp.v + '/' + bpd.v : '–', '', bp ? fmtD(bp.date) : '還沒量', '血壓', bp && (bp.v >= 135 || bpd.v >= 85) ? 'bad' : '')}
@@ -221,7 +221,7 @@ function renderHome(m) {
     </div>`;
   const tips = String(state.data.tip || '').split('\n').filter(l => l.trim() && !/^📊|^🏃|^📅|^🩸 血壓 \d+\/\d+$/.test(l.trim()));
   if (tips.length) h += `<div class="hero-tips">${tips.map(l => { const mm = l.trim().match(/^(\S+)\s+([\s\S]*)$/); return `<div class="htip"><span>${esc(mm ? mm[1] : '•')}</span><div>${esc(mm ? mm[2] : l)}</div></div>`; }).join('')}</div>`;
-  h += `<div class="hero-foot">${last ? '最後同步 ' + esc(String(last['更新時間'] || last['日期']).slice(5)) : '尚未同步 Apple 健康'}<button class="more light" data-go="daily">日常數據 ›</button></div></div>`;
+  h += `<div class="hero-foot"><button class="syncbtn" id="syncNow">⟳ 從手錶同步</button><span class="ml8">${last ? '上次 ' + esc(String(last['更新時間'] || last['日期']).slice(5)) : '尚未同步'}</span><button class="more light" data-go="daily">日常數據 ›</button></div></div>`;
 
   // ── 就醫行程：預約＋追蹤合併 ──
   const appts = rowsOf('預約').filter(a => a['狀態'] !== '已完成' && a['狀態'] !== '取消' && a['日期'] >= t).sort((a, b) => (a['日期'] + a['時間']).localeCompare(b['日期'] + b['時間']));
@@ -271,6 +271,7 @@ function renderHome(m) {
   m.innerHTML = h;
   bindCommon(m);
   m.querySelectorAll('[data-a]').forEach(el => el.onclick = () => showAppt(rowsOf('預約').find(a => a.id === el.dataset.a)));
+  $('#syncNow').onclick = () => { state.syncAt = Date.now(); toast('執行捷徑「健康同步」，完成後回到這裡會自動更新'); location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent('健康同步'); };
   m.querySelectorAll('[data-f]').forEach(el => el.onclick = () => showFu(rowsOf('追蹤項目').find(f => f.id === el.dataset.f)));
   m.querySelectorAll('[data-mk]').forEach(b => b.onclick = e => { e.stopPropagation(); const f = rowsOf('追蹤項目').find(x => x.id === b.dataset.mk); editAppt(null, { 日期: f['下次日期'] && f['下次日期'] >= today() ? f['下次日期'] : '', 科別: String(f['科別']).replace(/（.*）/, ''), 事由: f['項目'], 追蹤: f.id }); });
 }
@@ -937,5 +938,9 @@ $('#btnSettings').onclick = openSettings;
 try { const p = localStorage.getItem(LS.page); if (p && ['home', 'exam', 'daily', 'care', 'plan'].includes(p)) state.page = p; } catch (e) {}
 render();
 if (state.cfg.url) refresh(true); else if (!state.data) openSettings();
-document.addEventListener('visibilitychange', () => { if (!document.hidden && state.cfg.url && state.data && Date.now() - (state.data.at || 0) > 5 * 60 * 1000) refresh(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !state.cfg.url) return;
+  if (state.syncAt && Date.now() - state.syncAt < 10 * 60 * 1000) { state.syncAt = 0; setTimeout(() => refresh(true), 1500); return; }
+  if (state.data && Date.now() - (state.data.at || 0) > 5 * 60 * 1000) refresh(true);
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

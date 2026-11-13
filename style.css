@@ -231,3 +231,5 @@ table.tbl { border-collapse: collapse; width: 100%; font-size: 15.5px; }
 .dvals .bad { color: var(--bad); font-weight: 600; }
 ol.steps { padding-left: 20px; } ol.steps li { margin: 6px 0; }
 a.btn { text-decoration: none; display: inline-block; }
+.syncbtn { border: 0; background: rgba(255,255,255,.22); color: #fff; border-radius: 99px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; }
+.ml8 { margin-left: 8px; }
