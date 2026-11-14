@@ -252,3 +252,44 @@ header h1 { font-weight: 800; letter-spacing: .3px; background: linear-gradient(
 @media (prefers-color-scheme: dark) { .tl-date { background: #2c2c2e; } }
 nav#tabs { background: color-mix(in srgb, var(--card) 88%, transparent); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
 nav#tabs button.on span { transform: scale(1.12); }
+
+/* ===== 1.4 深色底＋鵝黃→Tiffany 藍 ===== */
+:root {
+  color-scheme: dark;
+  --bg: #0d1116; --card: #181d24; --text: #eef1f4; --sub: #9aa4b0; --line: #2a313a;
+  --accent: #3fd0c9; --accent-soft: #123432; --warn: #ffb547; --warn-soft: #3a2c12;
+  --bad: #ff5a4f; --bad-soft: #3b1a18; --good: #4cd98a; --good-soft: #13321f; --blue: #6cc4ff;
+  --teal: #3fd0c9; --purple: #9d8cff; --chart-grid: #262c34;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 22px rgba(0,0,0,.35);
+  --grad: linear-gradient(135deg, #fff0a3 0%, #c9edc0 45%, #81d8d0 75%, #0abab5 100%);
+  --on-grad: #0f2624;
+}
+html, body { background: var(--bg); }
+header#top { background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+header h1 { background: linear-gradient(90deg, #fff0a3, #81d8d0 60%, #0abab5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero { background: var(--grad); color: var(--on-grad); box-shadow: 0 12px 30px rgba(10,186,181,.22); }
+.ring-bg { stroke: rgba(15,38,36,.14); } .ring-fg { stroke: #0f2624; }
+.stat { background: rgba(255,255,255,.38); }
+.stat .sv.bad { color: #c0261c; } .stat .sv.good { color: #0f7a46; }
+.hero-tips { background: rgba(255,255,255,.34); }
+.htip { border-top-color: rgba(15,38,36,.1); }
+.hero-foot { opacity: 1; }
+.more.light { color: var(--on-grad); opacity: 1; font-weight: 600; }
+.syncbtn { background: rgba(15,38,36,.86); color: #fff0a3; }
+.btn, .add, .chips button.on { background: var(--grad); color: var(--on-grad); border-color: transparent; box-shadow: 0 4px 14px rgba(10,186,181,.25); }
+.btn.ghost { background: var(--line); color: var(--text); box-shadow: none; }
+.tl-date { background: var(--card); }
+.kcard, .tl-item, .tile, .fcard { background: #1f252d; }
+.lv-b-盡快 { background: var(--bad-soft); }
+nav#tabs { background: color-mix(in srgb, #12171d 90%, transparent); border-top-color: #222830; }
+nav#tabs button.on { color: #81d8d0; }
+.f input, .f select, .f textarea { background: #10151a; color: var(--text); }
+#toast { background: #2a313a; }
+.dsum .dcard:nth-child(6n+1) { --dc: #0abab5; } .dsum .dcard:nth-child(6n+2) { --dc: #ffd75e; }
+.dsum .dcard:nth-child(6n+3) { --dc: #4cd98a; } .dsum .dcard:nth-child(6n+4) { --dc: #6cc4ff; }
+.dsum .dcard:nth-child(6n+5) { --dc: #81d8d0; } .dsum .dcard:nth-child(6n+6) { --dc: #fff0a3; }
+.kgrid .kcard:nth-child(5n+1) { border-top-color: #0abab5; } .kgrid .kcard:nth-child(5n+2) { border-top-color: #ffd75e; }
+.kgrid .kcard:nth-child(5n+3) { border-top-color: #4cd98a; } .kgrid .kcard:nth-child(5n+4) { border-top-color: #6cc4ff; }
+.kgrid .kcard:nth-child(5n+5) { border-top-color: #81d8d0; }
+.kgrid .kcard.is-bad { border-top-color: var(--bad); }
+.seg button.on { background: var(--accent-soft); color: #81d8d0; }
