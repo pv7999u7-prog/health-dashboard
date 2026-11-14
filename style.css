@@ -261,12 +261,12 @@ nav#tabs button.on span { transform: scale(1.12); }
   --bad: #ff5a4f; --bad-soft: #3b1a18; --good: #4cd98a; --good-soft: #13321f; --blue: #6cc4ff;
   --teal: #3fd0c9; --purple: #9d8cff; --chart-grid: #262c34;
   --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 22px rgba(0,0,0,.35);
-  --grad: linear-gradient(135deg, #fff0a3 0%, #c9edc0 45%, #81d8d0 75%, #0abab5 100%);
+  --grad: linear-gradient(135deg, #fff4b8 0%, #ffec95 40%, #f6ea9c 62%, #a8e3cf 80%, #0abab5 100%);
   --on-grad: #0f2624;
 }
 html, body { background: var(--bg); }
 header#top { background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-header h1 { background: linear-gradient(90deg, #fff0a3, #81d8d0 60%, #0abab5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header h1 { background: linear-gradient(90deg, #fff0a3 0%, #ffe98a 62%, #81d8d0 82%, #0abab5 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero { background: var(--grad); color: var(--on-grad); box-shadow: 0 12px 30px rgba(10,186,181,.22); }
 .ring-bg { stroke: rgba(15,38,36,.14); } .ring-fg { stroke: #0f2624; }
 .stat { background: rgba(255,255,255,.38); }
