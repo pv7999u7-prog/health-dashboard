@@ -1,6 +1,6 @@
 /* 健康總覽 App：資料全部來自使用者自己的 Google 試算表（Apps Script＋密碼），本檔不含任何健康資料。 */
 'use strict';
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 const LS = { cfg: 'hc-cfg-v1', cache: 'hc-cache-v1', page: 'hc-page' };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
